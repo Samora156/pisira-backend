@@ -65,8 +65,8 @@ type ServiceOrder struct {
 	CreatedAt       time.Time  `db:"created_at"        json:"created_at"`
 	UpdatedAt       time.Time  `db:"updated_at"        json:"updated_at"`
 	// field join
-	CustomerNama string `db:"customer_nama"     json:"customer_nama"`
-	CustomerNoHP string `db:"customer_no_hp"    json:"customer_no_hp"`
+	CustomerNama    string     `db:"customer_nama"     json:"customer_nama"`
+	CustomerNoHP    string     `db:"customer_no_hp"    json:"customer_no_hp"`
 }
 
 type CreateOrderRequest struct {
@@ -121,8 +121,8 @@ type Invoice struct {
 	CreatedAt      time.Time `db:"created_at"      json:"created_at"`
 	UpdatedAt      time.Time `db:"updated_at"      json:"updated_at"`
 	// field join
-	CustomerNama string `db:"customer_nama"   json:"customer_nama"`
-	NoOrder      string `db:"no_order"        json:"no_order"`
+	CustomerNama   string    `db:"customer_nama"   json:"customer_nama"`
+	NoOrder        string    `db:"no_order"        json:"no_order"`
 }
 
 type CreateInvoiceRequest struct {

@@ -1,0 +1,9 @@
+[build]
+builder = "nixpacks"
+buildCommand = "go build -o pisira-backend ./cmd/api"
+
+[deploy]
+startCommand = "./pisira-backend"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"

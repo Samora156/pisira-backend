@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 	"github.com/pisira/backend/internal/model"
 	"github.com/pisira/backend/internal/repository"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {

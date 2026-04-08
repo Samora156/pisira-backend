@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -16,13 +17,11 @@ import (
 )
 
 func main() {
-	// 1. Load konfigurasi dari .env
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Gagal load config: %v", err)
 	}
 
-	// 2. Koneksi ke PostgreSQL
 	db, err := sqlx.Connect("postgres", cfg.DSN())
 	if err != nil {
 		log.Fatalf("Gagal koneksi database: %v", err)
@@ -32,24 +31,18 @@ func main() {
 	db.SetMaxIdleConns(5)
 	log.Println("PostgreSQL terkoneksi")
 
-	// 3. Inisialisasi layer (Repository → Service → Handler)
-	repo := repository.New(db)
-	svc := service.New(repo, cfg.JWTSecret, cfg.JWTExpireHours)
-	h := handler.New(svc)
+	repo   := repository.New(db)
+	svc    := service.New(repo, cfg.JWTSecret, cfg.JWTExpireHours)
+	h      := handler.New(svc)
 	authMw := middleware.Auth(cfg.JWTSecret)
 
-	// 4. Setup router Gin
-	// SetMode HARUS dipanggil sebelum gin.Default() agar tidak ada warning
 	if cfg.AppEnv == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	r := gin.Default()
-
-	// Fix warning "trusted all proxies": batasi ke lokal saja
-	// Jika pakai reverse proxy (Nginx), ganti dengan IP server Nginx Anda
 	r.SetTrustedProxies([]string{"127.0.0.1"})
 
-	// CORS — izinkan request dari frontend
+	// CORS — izinkan semua origin (frontend Vercel)
 	r.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
@@ -61,29 +54,33 @@ func main() {
 		c.Next()
 	})
 
-	// 5. Daftarkan semua route
+	// Health check untuk Railway
+	r.GET("/api/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok", "service": "PISIRA Backend"})
+	})
+
 	api := r.Group("/api")
 	{
 		api.POST("/auth/login", h.Login)
 
 		protected := api.Group("", authMw)
 		{
-			protected.GET("/customers", h.GetCustomers)
+			protected.GET("/customers",     h.GetCustomers)
 			protected.GET("/customers/:id", h.GetCustomerByID)
-			protected.POST("/customers", h.CreateCustomer)
+			protected.POST("/customers",    h.CreateCustomer)
 			protected.PUT("/customers/:id", h.UpdateCustomer)
 
-			protected.GET("/orders", h.GetOrders)
-			protected.GET("/orders/:id", h.GetOrderByID)
-			protected.POST("/orders", h.CreateOrder)
-			protected.PATCH("/orders/:id/status", h.UpdateOrderStatus)
+			protected.GET("/orders",               h.GetOrders)
+			protected.GET("/orders/:id",           h.GetOrderByID)
+			protected.POST("/orders",              h.CreateOrder)
+			protected.PATCH("/orders/:id/status",  h.UpdateOrderStatus)
 
-			protected.GET("/orders/:id/estimasi", h.GetEstimasi)
-			protected.POST("/estimasi", h.CreateEstimasi)
+			protected.GET("/orders/:id/estimasi",              h.GetEstimasi)
+			protected.POST("/estimasi",                         h.CreateEstimasi)
 			protected.PATCH("/orders/:id/estimasi/persetujuan", h.UpdatePersetujuan)
 
-			protected.GET("/invoices", h.GetInvoices)
-			protected.POST("/invoices", h.CreateInvoice)
+			protected.GET("/invoices",                   h.GetInvoices)
+			protected.POST("/invoices",                  h.CreateInvoice)
 			protected.PATCH("/invoices/:order_id/lunas", h.LunaskanInvoice)
 
 			admin := protected.Group("", middleware.AdminOnly())
@@ -93,8 +90,13 @@ func main() {
 		}
 	}
 
-	// 6. Jalankan server
-	addr := fmt.Sprintf(":%s", cfg.AppPort)
+	// Railway menyediakan PORT via environment variable
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = cfg.AppPort
+	}
+
+	addr := fmt.Sprintf(":%s", port)
 	log.Printf("PISIRA Backend berjalan di http://localhost%s", addr)
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("Server gagal berjalan: %v", err)
