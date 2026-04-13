@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
 	"github.com/pisira/backend/internal/model"
 	"github.com/pisira/backend/internal/repository"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
@@ -114,6 +114,13 @@ func (s *Service) UpdateOrderStatus(id int, req model.UpdateOrderStatusRequest) 
 	}
 	if !validStatus[req.Status] {
 		return nil, fmt.Errorf("status '%s' tidak valid", req.Status)
+	}
+	// Convert string kosong ke nil untuk field optional
+	if req.Diagnosa != nil && *req.Diagnosa == "" {
+		req.Diagnosa = nil
+	}
+	if req.CatatanTeknisi != nil && *req.CatatanTeknisi == "" {
+		req.CatatanTeknisi = nil
 	}
 	if err := s.repo.UpdateOrderStatus(id, req); err != nil {
 		return nil, err

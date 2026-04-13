@@ -142,16 +142,27 @@ func (r *Repository) CreateOrder(req model.CreateOrderRequest, teknisiID int) (i
 }
 
 func (r *Repository) UpdateOrderStatus(id int, req model.UpdateOrderStatusRequest) error {
-	_, err := r.db.Exec(`
-		UPDATE service_orders
-		SET status         = $1,
-		    diagnosa       = $2,
-		    catatan_teknisi = $3,
-		    tanggal_selesai = CASE WHEN $1 = 'selesai' THEN NOW() ELSE tanggal_selesai END,
-		    tanggal_ambil   = CASE WHEN $1 = 'diambil' THEN NOW() ELSE tanggal_ambil   END
-		WHERE id = $4`,
-		req.Status, req.Diagnosa, req.CatatanTeknisi, id,
-	)
+	var err error
+	switch req.Status {
+	case "selesai":
+		_, err = r.db.Exec(`
+            UPDATE service_orders
+            SET status = $1, diagnosa = $2, catatan_teknisi = $3, tanggal_selesai = NOW()
+            WHERE id = $4`,
+			req.Status, req.Diagnosa, req.CatatanTeknisi, id)
+	case "diambil":
+		_, err = r.db.Exec(`
+            UPDATE service_orders
+            SET status = $1, diagnosa = $2, catatan_teknisi = $3, tanggal_ambil = NOW()
+            WHERE id = $4`,
+			req.Status, req.Diagnosa, req.CatatanTeknisi, id)
+	default:
+		_, err = r.db.Exec(`
+            UPDATE service_orders
+            SET status = $1, diagnosa = $2, catatan_teknisi = $3
+            WHERE id = $4`,
+			req.Status, req.Diagnosa, req.CatatanTeknisi, id)
+	}
 	return err
 }
 
